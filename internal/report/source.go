@@ -571,8 +571,11 @@ func (reader *sourceReader) line(path string, lineno int) (string, bool) {
 // and their parents.
 func openSourceFile(path, searchPath string) (*os.File, error) {
 	if filepath.IsAbs(path) {
-		f, err := os.Open(path)
-		return f, err
+		if f, err := os.Open(path); err == nil {
+			return f, nil
+		} else {
+			path = makeRelativePath(path)
+		}
 	}
 
 	// Scan each component of the path
@@ -592,6 +595,18 @@ func openSourceFile(path, searchPath string) (*os.File, error) {
 	}
 
 	return nil, fmt.Errorf("Could not find file %s on path %s", path, searchPath)
+}
+
+func makeRelativePath(path string) string {
+	if path == "" || !filepath.IsAbs(path) {
+		return path
+	}
+	if idx := strings.Index(path, "src"); idx != -1 {
+		path = path[idx:]
+	} else if path[0] == '/' {
+		return path[1:]
+	}
+	return path
 }
 
 // trimPath cleans up a path by removing prefixes that are commonly
